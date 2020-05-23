@@ -25,35 +25,30 @@ namespace OktaSample.Controllers
         // GET: Todo
         public ActionResult Index()
         {
-            using (SqlConnection conn = Connection)
+            using var conn = Connection;
+            conn.Open();
+            using var cmd = conn.CreateCommand();
+
+            cmd.CommandText = @"SELECT Id, [Name], [Status], CreatedBy FROM Todo WHERE CreatedBy = @userId";
+
+            cmd.Parameters.AddWithValue("@userId", GetUserId());
+
+            var reader = cmd.ExecuteReader();
+            var todos = new List<Todo>();
+
+            while (reader.Read())
             {
-                conn.Open();
-
-                using (SqlCommand cmd = conn.CreateCommand())
+                todos.Add(new Todo
                 {
-                    cmd.CommandText = @"SELECT Id, [Name], [Status], CreatedBy FROM Todo WHERE CreatedBy = @userId";
-
-                    cmd.Parameters.Add(new SqlParameter("@userId", GetUserId()));
-
-                    var reader = cmd.ExecuteReader();
-
-                    var todos = new List<Todo>();
-
-                    while (reader.Read())
-                    {
-                        todos.Add(new Todo()
-                        {
-                            Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                            Name = reader.GetString(reader.GetOrdinal("Name")),
-                            Status = reader.GetString(reader.GetOrdinal("Status")),
-                            CreatedBy = reader.GetString(reader.GetOrdinal("CreatedBy"))
-                        });
-                    }
-
-                    reader.Close();
-                    return View(todos);
-                }
+                    Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                    Name = reader.GetString(reader.GetOrdinal("Name")),
+                    Status = reader.GetString(reader.GetOrdinal("Status")),
+                    CreatedBy = reader.GetString(reader.GetOrdinal("CreatedBy"))
+                });
             }
+
+            reader.Close();
+            return View(todos);
 
         }
 
@@ -70,9 +65,9 @@ namespace OktaSample.Controllers
         {
             try
             {
-                using SqlConnection conn = Connection;
+                using var conn = Connection;
                 conn.Open();
-                using SqlCommand cmd = conn.CreateCommand();
+                using var cmd = conn.CreateCommand();
 
                 cmd.CommandText = @"INSERT INTO Todo (Name, Status, CreatedBy) VALUES (@name, @status, @createdBy)";
 
